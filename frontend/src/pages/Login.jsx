@@ -2,8 +2,8 @@ import { useState } from "react";
 import api from "../api";
 
 function Login({ setLoggedIn }) {
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("admin123");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   const handleLogin = async (e) => {
