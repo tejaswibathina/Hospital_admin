@@ -36,7 +36,7 @@ function ReceptionistChatbot() {
     setInput("");
 
     try {
-      const response = await api.post("/chat", {
+      const response = await api.post("/chatbot", {
         message: currentInput,
         session_id: sessionId,
       });
