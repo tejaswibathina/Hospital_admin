@@ -525,28 +525,24 @@ def chat_with_ai(
     # ----------------------------------------
 
     if decision["type"] == "chat":
-
         prompt = build_general_chat_prompt(
         user_message=user_message,
         conversation_history=conversation_history,
-        hospital_context=hospital_context
-        )
+        hospital_context=hospital_context)
 
-    try:
-
-        reply = ask_llm(
+        try:
+            reply = ask_llm(
             prompt,
             temperature=0.7
-        )
+            )
 
-    except Exception:
+        except Exception:
+            reply = decision["reply"]
 
-        reply = decision["reply"]
-
-    return {
+        return {
         "type": "chat",
         "reply": reply
-    }
+        }
 
     # ----------------------------------------
     # Hospital Tool
