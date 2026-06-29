@@ -2,7 +2,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from auth import verify_login, change_admin_password
+from auth import (
+    verify_login,
+    change_admin_password
+)
 
 from database import (
     get_dashboard_data,
@@ -25,10 +28,16 @@ from hospital_context import (
 )
 
 from llm_router import (
-    chat_with_ai
+    safe_chat_response
 )
 
-app = FastAPI(title="AI Hospital Management Backend")
+# ==========================================================
+# FASTAPI
+# ==========================================================
+
+app = FastAPI(
+    title="AI Hospital Management Backend"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -38,9 +47,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# -----------------------------
-# Request Models
-# -----------------------------
+# ==========================================================
+# REQUEST MODELS
+# ==========================================================
 
 class LoginRequest(BaseModel):
     username: str
@@ -79,10 +88,9 @@ class DeleteAdmissionRequest(BaseModel):
 class SpecializationRequest(BaseModel):
     message: str
 
-
-# -----------------------------
-# Helper Functions
-# -----------------------------
+# ==========================================================
+# HELPER FUNCTIONS
+# ==========================================================
 
 def patient_to_dict(row):
     return {
@@ -91,7 +99,7 @@ def patient_to_dict(row):
         "age": row[2],
         "gender": row[3],
         "phone": row[4],
-        "address": row[5],
+        "address": row[5]
     }
 
 
@@ -102,7 +110,7 @@ def doctor_to_dict(row):
         "specialization": row[2],
         "phone": row[3],
         "availability_status": row[4],
-        "consultation_fee": row[5],
+        "consultation_fee": row[5]
     }
 
 
@@ -112,7 +120,7 @@ def room_to_dict(row):
         "room_number": row[1],
         "room_type": row[2],
         "price_per_day": row[3],
-        "status": row[4],
+        "status": row[4]
     }
 
 
@@ -127,38 +135,40 @@ def admission_to_dict(row):
         "insurance_provider": row[6],
         "admission_date": row[7],
         "discharge_date": row[8],
-        "status": row[9],
+        "status": row[9]
     }
 
-
-# -----------------------------
-# Root
-# -----------------------------
+# ==========================================================
+# ROOT
+# ==========================================================
 
 @app.get("/")
 def home():
+
     return {
-        "message": "AI Hospital Management Backend is running"
+        "message": "AI Hospital Management Backend Running Successfully"
     }
-
-
-# -----------------------------
-# Authentication
-# -----------------------------
+# ==========================================================
+# AUTHENTICATION
+# ==========================================================
 
 @app.post("/login")
 def login(data: LoginRequest):
 
-    if verify_login(data.username, data.password):
+    if verify_login(
+        data.username,
+        data.password
+    ):
+
         return {
             "success": True,
-            "message": "Login successful",
-            "role": "admin"
+            "role": "admin",
+            "message": "Login Successful"
         }
 
     raise HTTPException(
         status_code=401,
-        detail="Invalid username or password"
+        detail="Invalid username or password."
     )
 
 
@@ -171,6 +181,7 @@ def change_password(data: ChangePasswordRequest):
     )
 
     if not success:
+
         raise HTTPException(
             status_code=400,
             detail=message
@@ -182,9 +193,9 @@ def change_password(data: ChangePasswordRequest):
     }
 
 
-# -----------------------------
-# Dashboard
-# -----------------------------
+# ==========================================================
+# DASHBOARD
+# ==========================================================
 
 @app.get("/dashboard")
 def dashboard():
@@ -201,9 +212,9 @@ def dashboard():
     }
 
 
-# -----------------------------
-# Patients
-# -----------------------------
+# ==========================================================
+# PATIENTS
+# ==========================================================
 
 @app.get("/patients")
 def patients():
@@ -229,9 +240,9 @@ def delete_patient(data: DeletePatientRequest):
     }
 
 
-# -----------------------------
-# Doctors
-# -----------------------------
+# ==========================================================
+# DOCTORS
+# ==========================================================
 
 @app.get("/doctors")
 def doctors():
@@ -244,9 +255,9 @@ def doctors():
     ]
 
 
-# -----------------------------
-# Rooms
-# -----------------------------
+# ==========================================================
+# ROOMS
+# ==========================================================
 
 @app.get("/rooms")
 def rooms():
@@ -259,9 +270,9 @@ def rooms():
     ]
 
 
-# -----------------------------
-# Admissions
-# -----------------------------
+# ==========================================================
+# ADMISSIONS
+# ==========================================================
 
 @app.get("/admissions")
 def admissions():
@@ -305,110 +316,132 @@ def delete_admission(data: DeleteAdmissionRequest):
         "success": True,
         "message": result
     }
-
-
-# -----------------------------
-# AI Receptionist Chatbot
-# -----------------------------
+# ==========================================================
+# AI CHATBOT
+# ==========================================================
 
 @app.post("/chatbot")
 def chatbot(data: ChatRequest):
+    """
+    Main AI Chatbot Endpoint.
+    Handles:
+    - Conversation memory
+    - Hospital context
+    - Tool calling
+    - General chat
+    """
 
-    history = get_history(
-        data.session_id
-    )
+    try:
+        # ----------------------------------------
+        # Load previous conversation
+        # ----------------------------------------
 
-    history_text = ""
+        history = get_history(data.session_id)
 
-    for item in history:
-        history_text += (
-            f"{item['role']}: "
-            f"{item['content']}\n"
+        conversation_history = ""
+
+        for item in history:
+            conversation_history += (
+                f"{item['role']}: {item['content']}\n"
+            )
+
+        # ----------------------------------------
+        # Load hospital knowledge
+        # ----------------------------------------
+
+        hospital_context = build_hospital_context()
+
+        # ----------------------------------------
+        # Ask AI
+        # ----------------------------------------
+
+        ai_response = safe_chat_response(
+            user_message=data.message,
+            conversation_history=conversation_history,
+            hospital_context=hospital_context
         )
 
-    hospital_context = (
-        build_hospital_context()
-    )
+        # ----------------------------------------
+        # Extract reply
+        # ----------------------------------------
 
-    reply = chat_with_ai(
-        data.message,
-        history_text,
-        hospital_context
-    )
+        if isinstance(ai_response, dict):
+            reply = ai_response.get(
+                "reply",
+                "Sorry, I couldn't generate a response."
+            )
+        else:
+            reply = str(ai_response)
 
-    add_message(
-        data.session_id,
-        "user",
-        data.message
-    )
+        # ----------------------------------------
+        # Save conversation
+        # ----------------------------------------
 
-    add_message(
-        data.session_id,
-        "assistant",
-        reply
-    )
+        add_message(
+            data.session_id,
+            "user",
+            data.message
+        )
 
-    return {
-        "success": True,
-        "reply": reply
-    }
+        add_message(
+            data.session_id,
+            "assistant",
+            reply
+        )
 
+        # ----------------------------------------
+        # Return response
+        # ----------------------------------------
 
-# -----------------------------
-# Doctor Specialization Suggestion
-# -----------------------------
+        return {
+            "success": True,
+            "reply": reply
+        }
+
+    except Exception as e:
+
+        print("CHATBOT ERROR:", e)
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+# ==========================================================
+# DOCTOR SPECIALIZATION SUGGESTION
+# ==========================================================
 
 @app.post("/suggest-specialization")
-def suggest_specialization(
-    data: SpecializationRequest
-):
+def suggest_specialization(data: SpecializationRequest):
 
     symptoms = data.message.lower()
 
     if any(word in symptoms for word in [
-        "chest pain",
-        "heart",
-        "breathing",
-        "bp",
-        "blood pressure"
+        "heart", "chest pain", "bp",
+        "blood pressure", "breathing"
     ]):
         specialization = "Cardiologist"
 
     elif any(word in symptoms for word in [
-        "ear",
-        "nose",
-        "throat",
-        "cold",
-        "cough",
-        "sinus"
+        "ear", "nose", "throat",
+        "sinus", "cold", "cough"
     ]):
         specialization = "ENT"
 
     elif any(word in symptoms for word in [
-        "tooth",
-        "teeth",
-        "gum",
-        "dental",
-        "mouth"
+        "tooth", "teeth", "gum",
+        "mouth", "dental"
     ]):
         specialization = "Dentist"
 
     elif any(word in symptoms for word in [
-        "child",
-        "baby",
-        "kid",
-        "children",
-        "infant"
+        "child", "baby", "kid",
+        "children", "infant"
     ]):
         specialization = "Pediatrician"
 
     elif any(word in symptoms for word in [
-        "skin",
-        "rash",
-        "itching",
-        "allergy",
-        "pimples",
-        "acne"
+        "skin", "rash", "itching",
+        "allergy", "pimples", "acne"
     ]):
         specialization = "Dermatologist"
 
@@ -416,5 +449,19 @@ def suggest_specialization(
         specialization = "General Physician"
 
     return {
+        "success": True,
         "specialization": specialization
+    }
+
+
+# ==========================================================
+# HEALTH CHECK
+# ==========================================================
+
+@app.get("/health")
+def health():
+
+    return {
+        "status": "healthy",
+        "backend": "running"
     }
