@@ -11,9 +11,9 @@ load_dotenv()
 # CONFIGURATION
 # ==========================================================
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-USE_GEMINI = (
+USE_GROQ = (
     os.getenv("USE_PRIMARY_API", "true").lower() == "true"
 )
 
@@ -76,52 +76,36 @@ def is_valid_decision(data):
     return True
 
 # ==========================================================
-# GEMINI API
+# GROQ API
 # ==========================================================
 
-def call_gemini(prompt, temperature=0.3):
+def call_groq(prompt: str):
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
 
-    if not GEMINI_API_KEY:
-        raise Exception("Gemini API Key not configured.")
-
-    url = (
-        "https://generativelanguage.googleapis.com/"
-        "v1beta/models/gemini-2.0-flash:generateContent"
-        f"?key={GEMINI_API_KEY}"
-    )
-
-    payload = {
-        "contents": [
+    data = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": [
             {
-                "parts": [
-                    {
-                        "text": prompt
-                    }
-                ]
+                "role": "user",
+                "content": prompt
             }
         ],
-        "generationConfig": {
-            "temperature": temperature,
-            "maxOutputTokens": 1500
-        }
+        "temperature": 0.3
     }
 
     response = requests.post(
-        url,
-        json=payload,
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers=headers,
+        json=data,
         timeout=60
     )
 
-    if response.status_code != 200:
-        raise Exception(response.text)
+    response.raise_for_status()
 
-    data = response.json()
-
-    return (
-        data["candidates"][0]
-        ["content"]["parts"][0]["text"]
-    )
-
+    return response.json()["choices"][0]["message"]["content"]
 # ==========================================================
 # OLLAMA API
 # ==========================================================
@@ -156,21 +140,20 @@ def call_ollama(prompt, temperature=0.3):
 
 def ask_llm(prompt, temperature=0.3):
     """
-    Try Gemini first.
+    Try Groq first.
     Automatically fallback to Ollama.
     """
 
     errors = []
 
-    if USE_GEMINI:
+    if USE_GROQ:
         try:
-            return call_gemini(
-                prompt,
-                temperature
+            return call_groq(
+                prompt
             )
         except Exception as e:
             errors.append(
-                f"Gemini: {str(e)}"
+                f"Groq: {str(e)}"
             )
 
     if USE_OLLAMA:
@@ -661,7 +644,7 @@ def safe_chat_response(
     """
     Final safe wrapper.
     This function ensures that the chatbot never crashes
-    even if Gemini or Ollama fail.
+    even if Groq or Ollama fail.
     """
 
     try:

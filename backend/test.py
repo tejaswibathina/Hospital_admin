@@ -4,18 +4,16 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-key = os.getenv("GEMINI_API_KEY")
+key = os.getenv("GROQ_API_KEY")
 
-url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}"
+url = f"https://api.groq.com/openai/v1/chat/completions"
 
 payload = {
-    "contents": [
+    "model": "llama-3.3-70b-versatile",
+    "messages": [
         {
-            "parts": [
-                {
-                    "text": "hello"
-                }
-            ]
+            "role": "user",
+            "content": "hello"
         }
     ]
 }
