@@ -36,7 +36,8 @@ function Patients() {
       <table>
         <thead>
           <tr>
-            <th>ID</th>
+            <th>S.No</th>
+            <th>Patient ID</th>
             <th>Patient Name</th>
             <th>Age</th>
             <th>Gender</th>
@@ -47,8 +48,9 @@ function Patients() {
         </thead>
 
         <tbody>
-          {patients.map((patient) => (
+          {patients.map((patient, index) => (
             <tr key={patient.patient_id}>
+              <td>{index + 1}</td>
               <td>{patient.patient_id}</td>
               <td>{patient.patient_name}</td>
               <td>{patient.age}</td>
