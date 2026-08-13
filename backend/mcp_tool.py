@@ -20,6 +20,8 @@ from database import (
     get_dashboard_data,
     save_chat_history,
     view_chat_history,
+    count_total_rooms,
+    count_total_doctors,
 )
 
 ROOM_TYPES = ["General", "Deluxe", "Luxury"]
@@ -172,26 +174,15 @@ def handle_rooms(action):
 
     if intent == "count_rooms":
 
-        room_type = action.get("room_type", "General")
+        room_type = action.get("room_type", "All")
+
+        total = count_total_rooms(room_type)
 
         if room_type == "All":
 
-            total = 0
-            lines = []
+            return f"Total rooms: {total}"
 
-            for room in ROOM_TYPES:
-
-                count = count_available_rooms(room)
-
-                total += count
-
-                lines.append(f"{room}: {count}")
-
-            lines.append(f"\nTotal Available Rooms: {total}")
-
-            return "\n".join(lines)
-
-        return f"Available {room_type} rooms: {count_available_rooms(room_type)}"
+    return f"Total {room_type} rooms: {total}"
 
     if intent == "book_room":
 
@@ -235,16 +226,14 @@ def handle_doctors(action):
     if intent == "check_doctors":
 
         if specialization == "All":
-
             response = []
 
             for spec in SPECIALIZATIONS:
-
                 response.append(
                     format_doctors(
                         spec,
                         check_available_doctors(spec)
-                    )
+                   )
                 )
 
             return "\n\n".join(response)
@@ -254,31 +243,28 @@ def handle_doctors(action):
             check_available_doctors(specialization)
         )
 
-    if intent == "count_doctors":
+    if intent == "count_available_doctors":
+
+        specialization = action.get("specialization", "All")
+
+        total = count_available_doctors(specialization)
 
         if specialization == "All":
+            return f"Available doctors: {total}"
 
-            total = 0
+        return f"Available {specialization} doctors: {total}"
 
-            lines = []
+    if intent == "count_doctors":
 
-            for spec in SPECIALIZATIONS:
+        specialization = action.get("specialization", "All")
 
-                count = count_available_doctors(spec)
+        total = count_total_doctors(specialization)
 
-                total += count
+        if specialization == "All":
+            return f"Total doctors: {total}"
 
-                lines.append(f"{spec}: {count}")
+        return f"Total {specialization} doctors: {total}"
 
-            lines.append(f"\nTotal Doctors: {total}")
-
-            return "\n".join(lines)
-
-        return (
-            f"Available {specialization} doctors: "
-            f"{count_available_doctors(specialization)}"
-        )
-    
 def handle_insurance(action):
     provider = action.get("provider_name", "All")
 
@@ -438,6 +424,7 @@ INTENT_HANDLERS = {
     # Doctors
     "check_doctors": handle_doctors,
     "count_doctors": handle_doctors,
+    "count_available_doctors": handle_doctors,
 
     # Insurance
     "validate_insurance": handle_insurance,

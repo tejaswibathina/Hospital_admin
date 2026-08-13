@@ -141,24 +141,63 @@ def count_available_rooms(room_type):
 
     return len(check_available_rooms(room_type))
 
-
-# ---------------- DOCTORS ----------------
-
-def check_available_doctors(specialization):
+def count_total_rooms(room_type="All"):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT doctor_id, doctor_name, specialization, phone, availability_status, consultation_fee
-        FROM doctors
-        WHERE LOWER(specialization)=LOWER(?)
-        AND availability_status='Available'
-    """, (specialization,))
+    if room_type == "All":
+        cursor.execute("SELECT COUNT(*) FROM rooms")
+    else:
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM rooms
+            WHERE LOWER(room_type) = LOWER(?)
+            """,
+            (room_type,)
+        )
+
+    total = cursor.fetchone()[0]
+
+    conn.close()
+
+    return total
+
+
+# ---------------- DOCTORS ----------------
+
+def check_available_doctors(specialization="All"):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    if specialization == "All":
+        cursor.execute("""
+            SELECT doctor_id,
+                   doctor_name,
+                   specialization,
+                   phone,
+                   availability_status,
+                   consultation_fee
+            FROM doctors
+            WHERE availability_status = 'Available'
+        """)
+    else:
+        cursor.execute("""
+            SELECT doctor_id,
+                   doctor_name,
+                   specialization,
+                   phone,
+                   availability_status,
+                   consultation_fee
+            FROM doctors
+            WHERE LOWER(specialization) = LOWER(?)
+            AND availability_status = 'Available'
+        """, (specialization,))
 
     rows = cursor.fetchall()
     conn.close()
-    return rows
 
+    return rows
 
 def count_available_doctors(specialization):
     if specialization == "All":
@@ -169,6 +208,27 @@ def count_available_doctors(specialization):
 
     return len(check_available_doctors(specialization))
 
+def count_total_doctors(specialization="All"):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    if specialization == "All":
+        cursor.execute("SELECT COUNT(*) FROM doctors")
+    else:
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM doctors
+            WHERE LOWER(specialization) = LOWER(?)
+            """,
+            (specialization,)
+        )
+
+    total = cursor.fetchone()[0]
+
+    conn.close()
+
+    return total
 
 # ---------------- INSURANCE ----------------
 
@@ -993,63 +1053,6 @@ def count_available_rooms(room_type):
 
 # ---------------- DOCTORS ----------------
 
-def check_available_doctors(specialization):
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT doctor_id, doctor_name, specialization, phone, availability_status, consultation_fee
-        FROM doctors
-        WHERE LOWER(specialization)=LOWER(?)
-        AND availability_status='Available'
-    """, (specialization,))
-
-    rows = cursor.fetchall()
-    conn.close()
-    return rows
-
-
-def count_available_doctors(specialization):
-    if specialization == "All":
-        total = 0
-        for spec in ["Dentist", "ENT", "Cardiologist", "Pediatrician", "Dermatologist"]:
-            total += len(check_available_doctors(spec))
-        return total
-
-    return len(check_available_doctors(specialization))
-
-
-# ---------------- INSURANCE ----------------
-
-def check_insurance(provider_name):
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT insurance_id, provider_name, coverage_percent, status
-        FROM insurance_providers
-        WHERE LOWER(provider_name)=LOWER(?)
-        AND status='Active'
-    """, (provider_name,))
-
-    row = cursor.fetchone()
-    conn.close()
-    return row
-
-
-def view_insurance_providers():
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT provider_name, coverage_percent, status
-        FROM insurance_providers
-        WHERE status='Active'
-    """)
-
-    rows = cursor.fetchall()
-    conn.close()
-    return rows
 
 
 # ---------------- ROOM BOOKING ----------------

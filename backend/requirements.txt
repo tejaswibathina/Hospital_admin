@@ -2,8 +2,4 @@ fastapi
 uvicorn
 pydantic
 python-dotenv
-fastapi
-uvicorn
-pydantic
-python-dotenv
 requests

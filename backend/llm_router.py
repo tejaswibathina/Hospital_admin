@@ -178,7 +178,7 @@ def build_decision_prompt(
     conversation_history=""
 ):
     return f"""
-You are Sarah, the AI Receptionist of MedCare Hospital.
+You are Tez, the AI Receptionist of MedCare Hospital.
 
 Your FIRST job is to decide whether the user's request
 needs access to the hospital database.
@@ -378,9 +378,174 @@ def decide_tool_call(
     conversation_history=""
 ):
     """
-    Decide whether the message requires
-    hospital database access.
+    Decide whether the message requires hospital database access.
+    Handles important count queries directly to avoid LLM confusion.
     """
+
+    query = user_message.lower().strip()
+    doctor_specializations = [
+        "dentist",
+        "ent",
+        "cardiologist",
+        "pediatrician",
+        "dermatologist"
+    ]
+    
+
+    # ==========================================
+    # DIRECT COUNT INTENTS
+    # ==========================================
+    if (
+        "how many doctors are available" in query
+        or "how many available doctors" in query
+        or "number of available doctors" in query
+    ):
+
+        specialization = "All"
+
+        for spec in doctor_specializations:
+            if spec in query:
+                specialization = spec.capitalize()
+                break
+
+        return {
+            "type": "tool",
+            "intent_data": {
+                "actions": [
+                    {
+                        "intent": "count_available_doctors",
+                        "specialization": specialization
+                    }
+                ]
+            }
+         }
+    # ------------------------------------------
+    # AVAILABLE DOCTORS
+    # ------------------------------------------
+    doctor_specializations = [
+        "dentist",
+        "ent",
+        "cardiologist",
+        "pediatrician",
+        "dermatologist"
+        ]
+    
+    room_types = [
+        "general",
+        "deluxe",
+        "luxury"
+        ]
+    
+    if (
+        "available doctors" in query
+        or "doctors available" in query
+        or "available doctor" in query
+        or "doctor available" in query
+        or "doctors are available" in query
+        or "doctor is available" in query
+    ):
+
+        specialization = "All"
+
+        for spec in doctor_specializations:
+            if spec in query:
+                specialization = spec.capitalize()
+                break
+
+        return {
+            "type": "tool",
+            "intent_data": {
+                "actions": [
+                    {
+                        "intent": "check_doctors",
+                        "specialization": specialization
+                    }
+                ]
+            }
+        }
+
+    # TOTAL DOCTORS
+
+
+    if (
+        "total doctors" in query
+        or "how many doctors" in query
+        or "number of doctors" in query
+    ):
+
+        specialization = "All"
+
+        for spec in doctor_specializations:
+            if spec in query:
+                specialization = spec.capitalize()
+                break
+
+        return {
+            "type": "tool",
+            "intent_data": {
+                "actions": [
+                    {
+                        "intent": "count_doctors",
+                        "specialization": specialization
+                    }
+                ]
+            }
+        }
+
+
+    # Total rooms
+    room_types = [
+        "general",
+        "deluxe",
+        "luxury"
+    ]
+
+    if (
+        "total rooms" in query
+        or "how many rooms" in query
+        or "number of rooms" in query
+    ):
+
+        room_type = "All"
+
+        for room in room_types:
+            if room in query:
+                room_type = room.capitalize()
+                break
+
+        return {
+            "type": "tool",
+            "intent_data": {
+                "actions": [
+                    {
+                        "intent": "count_rooms",
+                        "room_type": room_type
+                    }
+                ]
+            }
+        }
+
+    # Total patients
+    if (
+        "total patients" in query
+        or "how many patients" in query
+        or "number of patients" in query
+    ):
+
+        return {
+            "type": "tool",
+            "intent_data": {
+                "actions": [
+                    {
+                        "intent": "count_patients"
+                    }
+                ]
+            }
+        }
+
+    # ==========================================
+    # OTHER QUESTIONS → LLM
+    # ==========================================
 
     prompt = build_decision_prompt(
         user_message,
@@ -421,7 +586,7 @@ def build_rewrite_prompt(
     """
 
     return f"""
-You are Sarah, the AI Receptionist of MedCare Hospital.
+You are Tez, the AI Receptionist of MedCare Hospital.
 
 The hospital database has already executed the user's request.
 
@@ -589,7 +754,7 @@ def build_general_chat_prompt(
     """
 
     return f"""
-You are Sarah, the AI Receptionist of MedCare Hospital.
+You are Tez, the AI Receptionist of MedCare Hospital.
 
 Your personality is similar to ChatGPT.
 
